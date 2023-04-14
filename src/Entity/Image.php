@@ -14,6 +14,8 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use App\Repository\ImageRepository;
 use DateTimeImmutable;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
@@ -56,11 +58,35 @@ class Image
     #[Groups('read')]
     private ?\DateTimeImmutable $createdAt;
 
+    #[ORM\ManyToMany(targetEntity: UserFavorite::class, mappedBy: 'images')]
+    private Collection $userFavorites;
+
+    #[ORM\Column(type: 'string')]
+    #[Groups(['read', 'write'])]
+    private $imageFilename;
+
+    #[ORM\ManyToOne(inversedBy: 'uploadedImages')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['read', 'write'])]
+    private ?User $uploadedBy = null;
 
 
     public function __construct()
     {
         $this->createdAt = new DateTimeImmutable('now');
+        // $this->userFavorites = new ArrayCollection();
+    }
+
+    public function getImageFilename(): string
+    {
+        return $this->imageFilename;
+    }
+
+    public function setImageFilename(string $imageFilename): self
+    {
+        $this->imageFilename = $imageFilename;
+
+        return $this;
     }
 
     public function getId(): ?int
@@ -93,6 +119,52 @@ class Image
     public function setName(string $name): self
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, UserFavorite>
+     */
+    public function getUserFavorites(): Collection
+    {
+        return $this->userFavorites;
+    }
+
+    public function addUserFavorite(UserFavorite $userFavorite): self
+    {
+        if (!$this->userFavorites->contains($userFavorite)) {
+            $this->userFavorites->add($userFavorite);
+            $userFavorite->addImage($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUserFavorite(UserFavorite $userFavorite): self
+    {
+        if ($this->userFavorites->removeElement($userFavorite)) {
+            $userFavorite->removeImage($this);
+        }
+
+        return $this;
+    }
+
+    public function getUploadedBy(): ?User
+    {
+        return $this->uploadedBy;
+    }
+
+    public function setUploadedBy(?User $uploadedBy): ?self
+    {
+        $this->uploadedBy = $uploadedBy;
 
         return $this;
     }
